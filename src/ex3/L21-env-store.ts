@@ -17,7 +17,7 @@ export interface Store {
     vals: Box<Value>[];
 }
 
-export const isStore = ...;
+export const isStore = (x: any): x is Store => x.tag === "Store";
 export const makeEmptyStore = ...;
 export const theStore: Store = 
 export const extendStore = (s: Store, val: Value): Store =>
@@ -76,5 +76,4 @@ export const globalEnvAddBinding = (v: string, addr: number): void =>
     // Complete
 
 const applyExtEnv = (env: ExtEnv, v: string): Result<number> =>
-    env.vars.includes(v) ? makeOk(env.addresses[env.vars.indexOf(v)]) :
-    applyEnv(env.nextEnv, v);
+    env.vars.includes(v) ? makeOk(env.addresses[env.vars.indexOf(v)]) : applyEnv(env.nextEnv, v);
