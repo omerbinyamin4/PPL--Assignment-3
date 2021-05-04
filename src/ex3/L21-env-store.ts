@@ -1,4 +1,4 @@
-import { add, map, zipWith } from "ramda";
+import R, { add, map, zipWith } from "ramda";
 import { Value } from './L21-value-store';
 import { Result, makeFailure, makeOk, bind, either } from "../shared/result";
 
@@ -18,17 +18,24 @@ export interface Store {
 }
 
 export const isStore = (x: any): x is Store => x.tag === "Store";
-export const makeEmptyStore = ...;
-export const theStore: Store = 
-export const extendStore = (s: Store, val: Value): Store =>
-    // Complete
-    
-export const applyStore = (store: Store, address: number): Result<Value> =>
-    // Complete
 
-    
-export const setStore = (store: Store, address: number, val: Value): void => 
-    // Complete
+export const makeEmptyStore = (): Store => ({tag : "Store", vals : makeBox([])});
+
+export const theStore: Store = makeEmptyStore();
+
+export const extendStore = (s: Store, val: Value): Store => 
+    ({tag : "Store", vals : R.insert(R.length(s.vals), makeBox(val), s.vals)});  
+
+export const applyStore = (store: Store, address: number): Result<Value> =>
+    address > R.length(store.vals) ? makeFailure("Illegal address") : 
+                                        makeOk(unbox(store.vals[address]));
+
+export const setStore = (store: Store, address: number, val: Value): void => {
+    if (address <= R.length(store.vals))
+        setBox(store.vals[address], val);
+}
+
+export const getNextAvailableAddress = (s: Store): number => R.length(s.vals); 
 
 
 // ========================================================
@@ -39,26 +46,32 @@ export type Env = GlobalEnv | ExtEnv;
 interface GlobalEnv {
     tag: "GlobalEnv";
     vars: Box<string[]>;
-    addresses: Box<number[]>
+    addresses: Box<number[]>;
+    store: Store;
 }
 
 export interface ExtEnv {
     tag: "ExtEnv";
     vars: string[];
     addresses: number[];
+    store: Store;
     nextEnv: Env;
 }
 
 const makeGlobalEnv = (): GlobalEnv =>
-    ({tag: "GlobalEnv", vars: makeBox([]), addresses:makeBox([])});
+    ({tag: "GlobalEnv", vars: makeBox([]), addresses:makeBox([]), store = theStore});
 
 export const isGlobalEnv = (x: any): x is GlobalEnv => x.tag === "GlobalEnv";
 
 // There is a single mutable value in the type Global-env
 export const theGlobalEnv = makeGlobalEnv();
 
-export const makeExtEnv = (vs: string[], addresses: number[], env: Env): ExtEnv =>
+export const makeExtEnv = (vs: string[], addresses: number[], vals: Value[], env: Env): ExtEnv =>{
     ({tag: "ExtEnv", vars: vs, addresses: addresses, nextEnv: env});
+}
+// export const makeExtEnv = (vs: string[], addresses: number[], env: Env): ExtEnv =>{
+//     ({tag: "ExtEnv", vars: vs, addresses: addresses, nextEnv: env});
+// }
 
 const isExtEnv = (x: any): x is ExtEnv => x.tag === "ExtEnv";
 
