@@ -55,7 +55,7 @@ const applyProcedure = (proc: Value, args: Value[]): Result<Value> =>
 
 const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
     const vars = map((v: VarDecl) => v.var, proc.params); //extract variables names
-    const addresses: number[] = times(add(length(theStore.vals)), length(vars)); //get the addresses of the new varaiable in the store
+    const addresses: number[] = times(add(length(unbox(theStore.vals))), length(vars)); //get the addresses of the new varaiable in the store
     reduce((acc: Store, val: Value) => extendStore(acc, val), theStore, args); //update the store with values
     const newEnv: ExtEnv = makeExtEnv(vars, addresses, proc.env) //extend the env (add variable names and adresses)
     return evalSequence(proc.body, newEnv); //eval proc body, with the updated env its store
@@ -93,7 +93,7 @@ const evalLet = (exp: LetExp, env: Env): Result<Value> => {
     const vals = mapResult((v: CExp) => applicativeEval(v, env), map((b: Binding) => b.val, exp.bindings));
     const vars = map((b: Binding) => b.var.var, exp.bindings);
     return bind(vals, (vals: Value[]) => {
-        const addresses: number[] = times(add(length(theStore.vals)), length(vars));
+        const addresses: number[] = times(add(length(unbox(theStore.vals))), length(vars));
         reduce((acc: Store, val: Value) => extendStore(acc, val), theStore, vals);
         const newEnv: ExtEnv = makeExtEnv(vars, addresses, env)
         return evalSequence(exp.body, newEnv);})
