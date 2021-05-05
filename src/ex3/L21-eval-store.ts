@@ -5,9 +5,9 @@
 import { map, reduce, repeat, zipWith, times, add, length} from "ramda";
 import { isBoolExp, isCExp, isLitExp, isNumExp, isPrimOp, isStrExp, isVarRef,
          isAppExp, isDefineExp, isIfExp, isLetExp, isProcExp, Binding, VarDecl, CExp, Exp, IfExp, LetExp, ProcExp, Program,
-         parseL21Exp, DefineExp, VarRef, isSetExp, SetExp} from "./L21-ast";
-import { applyEnv, makeExtEnv, Env, Store, setStore, extendStore, ExtEnv, theGlobalEnv, globalEnvAddBinding, theStore, applyStore } from "./L21-env-store";
-import { isClosure, makeClosure, Closure, Value} from "./L21-value-store";
+         parseL21Exp, DefineExp, VarRef, isSetExp, SetExp, makeBoolExp} from "./L21-ast";
+import { applyEnv, makeExtEnv, Env, Store, setStore, extendStore, ExtEnv, theGlobalEnv, globalEnvAddBinding, theStore, applyStore, makeGlobalEnv } from "./L21-env-store";
+import { isClosure, makeClosure, Closure, Value, makeEmptySExp} from "./L21-value-store";
 import { applyPrimitive } from "./evalPrimitive-store";
 import { first, rest, isEmpty } from "../shared/list";
 import { Result, bind, safe2, mapResult, makeFailure, makeOk, isOk } from "../shared/result";
@@ -16,6 +16,7 @@ import { unbox } from "../shared/box";
 
 // ========================================================
 // Eval functions
+
 
 const applicativeEval = (exp: CExp, env: Env): Result<Value> =>
     isNumExp(exp) ? makeOk(exp.val) :
@@ -48,12 +49,17 @@ const evalProc = (exp: ProcExp, env: Env): Result<Closure> =>
 
 // KEY: This procedure does NOT have an env parameter.
 //      Instead we use the env of the closure.
-const applyProcedure = (proc: Value, args: Value[]): Result<Value> =>
-    isPrimOp(proc) ? applyPrimitive(proc, args) :
+const applyProcedure = (proc: Value, args: Value[]): Result<Value> => {
+    const s = theStore;
+    const e = theGlobalEnv;
+    return isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args) :
     makeFailure(`Bad procedure ${JSON.stringify(proc)}`);
+}
 
 const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
+    const s = theStore;
+    const e = theGlobalEnv;
     const vars = map((v: VarDecl) => v.var, proc.params); //extract variables names
     const addresses: number[] = times(add(length(unbox(theStore.vals))), length(vars)); //get the addresses of the new varaiable in the store
     reduce((acc: Store, val: Value) => extendStore(acc, val), theStore, args); //update the store with values
@@ -73,15 +79,18 @@ const evalCExps = (first: Exp, rest: Exp[], env: Env): Result<Value> =>
     first;
 
 const evalDefineExps = (def: DefineExp, exps: Exp[], env: Env): Result<Value> =>{
+    const s = theStore;
+    const e = theGlobalEnv;
     globalEnvAddBinding(def.var.var, length(unbox(theStore.vals)));
-    const valResult = bind(applicativeEval(def.val, env), (v: Value) => makeOk(extendStore(theStore, v)))
-    return bind (bind(applicativeEval(def.val, env), (v: Value) => makeOk(extendStore(theStore, v))),
+    extendStore(theStore, 'temp');
+    const valueAdress: number = length(unbox(theStore.vals)) - 1;
+    return bind (bind(applicativeEval(def.val, env), (v: Value) => makeOk(setStore(theStore, valueAdress , v))),
                                 () => evalSequence(exps, theGlobalEnv));
 }
 
 // Main program
 // L2-BOX @@ Use GE instead of empty-env
-export const evalProgram = (program: Program): Result<Value> =>
+export const evalProgram = (program: Program): Result<Value> => 
     evalSequence(program.exps, theGlobalEnv);
 
 export const evalParse = (s: string): Result<Value> =>

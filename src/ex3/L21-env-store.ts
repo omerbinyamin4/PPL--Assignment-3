@@ -1,5 +1,5 @@
 import R, { add, map, zipWith } from "ramda";
-import { Value } from './L21-value-store';
+import { makeEmptySExp, Value } from './L21-value-store';
 import { Result, makeFailure, makeOk, bind, either } from "../shared/result";
 
 // ========================================================
@@ -24,17 +24,17 @@ export const makeEmptyStore = (): Store => ({tag : "Store", vals : makeBox([])})
 export const theStore: Store = makeEmptyStore();
 
 export const extendStore = (s: Store, val: Value): Store => {
-    setBox(s.vals, R.insert(R.length(s.vals), makeBox(val), unbox(s.vals)));
+    setBox(s.vals, R.insert(R.length(unbox(s.vals)), makeBox(val), unbox(s.vals)));
     return s;
 }
 
 export const applyStore = (store: Store, address: number): Result<Value> =>
-    address > R.length(store.vals) ? makeFailure("Illegal address") : 
+    address > R.length(unbox(store.vals)) ? makeFailure("Illegal address") : 
                                         makeOk(unbox(unbox(store.vals)[address]));
 
 export const setStore = (store: Store, address: number, val: Value): void => {
-    if (address <= R.length(store.vals))
-        setBox(store.vals[address], makeBox(val));
+    if (address <= R.length(unbox(store.vals)))
+        setBox(unbox(store.vals)[address], val);
 }
 
 // ========================================================
@@ -55,7 +55,7 @@ export interface ExtEnv {
     nextEnv: Env;
 }
 
-const makeGlobalEnv = (): GlobalEnv =>
+export const makeGlobalEnv = (): GlobalEnv =>
     ({tag: "GlobalEnv", vars: makeBox([]), addresses:makeBox([])});
 
 export const isGlobalEnv = (x: any): x is GlobalEnv => x.tag === "GlobalEnv";
