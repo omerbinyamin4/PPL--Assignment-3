@@ -50,16 +50,12 @@ const evalProc = (exp: ProcExp, env: Env): Result<Closure> =>
 // KEY: This procedure does NOT have an env parameter.
 //      Instead we use the env of the closure.
 const applyProcedure = (proc: Value, args: Value[]): Result<Value> => {
-    const s = theStore;
-    const e = theGlobalEnv;
     return isPrimOp(proc) ? applyPrimitive(proc, args) :
     isClosure(proc) ? applyClosure(proc, args) :
     makeFailure(`Bad procedure ${JSON.stringify(proc)}`);
 }
 
 const applyClosure = (proc: Closure, args: Value[]): Result<Value> => {
-    const s = theStore;
-    const e = theGlobalEnv;
     const vars = map((v: VarDecl) => v.var, proc.params); //extract variables names
     const addresses: number[] = times(add(length(unbox(theStore.vals))), length(vars)); //get the addresses of the new varaiable in the store
     reduce((acc: Store, val: Value) => extendStore(acc, val), theStore, args); //update the store with values
@@ -79,8 +75,6 @@ const evalCExps = (first: Exp, rest: Exp[], env: Env): Result<Value> =>
     first;
 
 const evalDefineExps = (def: DefineExp, exps: Exp[], env: Env): Result<Value> =>{
-    const s = theStore;
-    const e = theGlobalEnv;
     globalEnvAddBinding(def.var.var, length(unbox(theStore.vals)));
     extendStore(theStore, 'temp');
     const valueAdress: number = length(unbox(theStore.vals)) - 1;
